@@ -1,0 +1,227 @@
+#include <Servo.h>
+#include "SR04.h"
+#include <Leg.h> 
+#define NEUTRAL_ANGLE 90
+#define OFFSET 45
+#define STEP_ANGLE 30
+#define FOOT_LIFT 30
+#define STEP_DELAY 20 
+#define DRAG_DELAY 7
+#define OBST_DIST 20
+
+
+
+/*
+  legjoints[0] = LF Knee -
+  legjoints[1] = LF Hip -
+  legjoints[2] = LM Knee -
+  legjoints[3] = LM Hip -
+  legjoints[4] = LB Knee -
+  legjoints[5] = LB Hip -
+  legjoints[6] = RF Knee -
+  legjoints[7] = RF Hip -
+  legjoints[8] = RM Knee -
+  legjoints[9] = RM Hip -
+  legjoints[10] = RB Knee -
+  legjoints[11] = RB Hip -
+ */
+void walk(Servo legJoints[], int lift_angle, int left_step_angle, int right_step_angle, int step_delay)
+{
+    static bool stage = 0; 
+    bool done = false;
+    if (stage == 0)
+    {
+    legJoints[0].write(NEUTRAL_ANGLE - lift_angle); 
+    legJoints[8].write(NEUTRAL_ANGLE + lift_angle);
+    legJoints[4].write(NEUTRAL_ANGLE - lift_angle);
+
+    //done = false;
+    while (done == false) //Pull pair 2 back
+    {
+      if (legJoints[7].read() < NEUTRAL_ANGLE + OFFSET) legJoints[7].write(legJoints[7].read() + 1);
+      else if (legJoints[7].read() > NEUTRAL_ANGLE + OFFSET) legJoints[7].write(legJoints[7].read() - 1);
+
+      if (legJoints[3].read() < NEUTRAL_ANGLE) legJoints[3].write(legJoints[3].read() + 1);
+      else if (legJoints[3].read() > NEUTRAL_ANGLE) legJoints[3].write(legJoints[3].read() - 1);
+
+      if (legJoints[11].read() < NEUTRAL_ANGLE - OFFSET) legJoints[11].write(legJoints[11].read() + 1);
+      else if (legJoints[11].read() > NEUTRAL_ANGLE - OFFSET) legJoints[11].write(legJoints[11].read() - 1);
+
+      if (legJoints[7].read() == (NEUTRAL_ANGLE + OFFSET) && legJoints[3].read() == NEUTRAL_ANGLE && legJoints[11].read() == (NEUTRAL_ANGLE - OFFSET)) done = true;
+      else delay(DRAG_DELAY);
+    }
+    
+    legJoints[1].write(NEUTRAL_ANGLE + left_step_angle - OFFSET); 
+    legJoints[9].write(NEUTRAL_ANGLE - right_step_angle);
+    legJoints[5].write(NEUTRAL_ANGLE + left_step_angle + OFFSET);
+    delay(STEP_DELAY);
+    
+    legJoints[0].write(NEUTRAL_ANGLE); 
+    legJoints[8].write(NEUTRAL_ANGLE);
+    legJoints[4].write(NEUTRAL_ANGLE);
+    delay(STEP_DELAY);
+    stage = 1;
+    }
+    else
+    {
+    legJoints[6].write(NEUTRAL_ANGLE + lift_angle); 
+    legJoints[2].write(NEUTRAL_ANGLE - lift_angle);
+    legJoints[10].write(NEUTRAL_ANGLE + lift_angle);
+
+    //done = false;
+    while (done == false) //Pull pair 1 back
+    {
+      if (legJoints[1].read() < NEUTRAL_ANGLE - OFFSET) legJoints[1].write(legJoints[1].read() + 1);
+      else if (legJoints[1].read() > NEUTRAL_ANGLE - OFFSET) legJoints[1].write(legJoints[1].read() - 1);
+
+      if (legJoints[9].read() < NEUTRAL_ANGLE) legJoints[9].write(legJoints[9].read() + 1);
+      else if (legJoints[9].read() > NEUTRAL_ANGLE) legJoints[9].write(legJoints[9].read() - 1);
+
+      if (legJoints[5].read() < NEUTRAL_ANGLE + OFFSET) legJoints[5].write(legJoints[5].read() + 1);
+      else if (legJoints[5].read() > NEUTRAL_ANGLE + OFFSET) legJoints[5].write(legJoints[5].read() - 1);
+
+      if (legJoints[1].read() == (NEUTRAL_ANGLE - OFFSET) && legJoints[9].read() == NEUTRAL_ANGLE && legJoints[5].read() == (NEUTRAL_ANGLE + OFFSET)) done = true;
+      else delay(DRAG_DELAY);
+    }
+
+    legJoints[7].write(NEUTRAL_ANGLE - right_step_angle + OFFSET); 
+    legJoints[3].write(NEUTRAL_ANGLE + left_step_angle);
+    legJoints[11].write(NEUTRAL_ANGLE - right_step_angle - OFFSET);
+    delay(STEP_DELAY);
+
+    legJoints[6].write(NEUTRAL_ANGLE); //Drop pair 2's feet
+    legJoints[2].write(NEUTRAL_ANGLE);
+    legJoints[10].write(NEUTRAL_ANGLE);
+    delay(STEP_DELAY);
+    stage = 0;
+    }
+}
+
+void walkForward(Servo legJoints[], int lift_angle, int step_angle, int step_delay)
+{
+  walk(legJoints, lift_angle, step_angle, step_angle, step_delay);
+}
+
+void walkBackward(Servo legJoints[], int lift_angle, int step_angle, int step_delay)
+{
+  walk(legJoints, lift_angle, -step_angle, -step_angle, step_delay);
+}
+
+void turnRight(Servo legJoints[], int lift_angle, int step_angle, int step_delay)
+{
+  walk(legJoints, lift_angle, step_angle, -step_angle, step_delay);
+}
+
+void turnLeft(Servo legJoints[], int lift_angle, int step_angle, int step_delay)
+{
+  walk(legJoints, lift_angle, -step_angle, step_angle, step_delay);
+}
+
+void stand(Servo legJoints[])
+{
+  for (int i = 0; i < 12; i = i + 2)
+  {
+    if (i <= 4) legJoints[i].write(NEUTRAL_ANGLE - STEP_ANGLE);
+    else legJoints[i].write(NEUTRAL_ANGLE + STEP_ANGLE);
+
+    legJoints[i+1].write(NEUTRAL_ANGLE);
+    delay(STEP_DELAY);
+    legJoints[i].write(NEUTRAL_ANGLE);
+  }
+}
+
+int scan(Servo legJoints[], int lift_angle, int step_angle, int step_delay, SR04 sr04, int scan_steps, int extra_steps_to_avoid, int det_range_cm)
+{
+  int steps_right = 0;
+  int far_obst_right = 0;
+  int far_obst_left = 0;
+  long dist;
+
+  for (int i = 0; i < scan_steps; i++)
+  {
+    turnLeft(legJoints, lift_angle, step_angle, step_delay);
+    dist = sr04.Distance();
+    if (dist <= det_range_cm) far_obst_left = i+1;
+  }
+  for (int i = 0; i < scan_steps; i++)
+  {
+    turnRight(legJoints, lift_angle, step_angle, step_delay);
+  }
+  for (int i = 0; i < scan_steps; i++)
+  {
+    turnRight(legJoints, lift_angle, step_angle, step_delay);
+    dist = sr04.Distance();
+    if (dist <= det_range_cm) far_obst_right = i+1;
+  }
+  for (int i = 0; i < scan_steps; i++)
+  {
+    turnLeft(legJoints, lift_angle, step_angle, step_delay);
+  }
+
+  if (far_obst_left < far_obst_right) steps_right = -(far_obst_left + extra_steps_to_avoid);
+  else steps_right = far_obst_right + extra_steps_to_avoid;
+
+  return steps_right;
+}
+
+Servo legJoints[12];
+SR04 sr04 = SR04(A3,A2);
+long dist;
+
+void setup() {
+  
+    for (int i = 0; i < 12; i++)
+    {
+      legJoints[i].attach(i+2);
+    }
+
+    stand(legJoints);
+    //Serial.begin(9600);
+    delay(1000);
+}
+
+void loop() {
+
+/*
+  for (int i = 0; i < 10; i++)
+  {
+    walkForward(legJoints);
+  }
+  delay(1000);
+  for (int i = 0; i < 10; i++)
+  {
+    walkBackward(legJoints);
+  }
+  delay(1000);
+  */
+
+  //turnLeft(legJoints);
+  /*
+   dist = sr04.Distance();
+   Serial.print(dist);
+   Serial.println("cm");
+   if (dist < OBST_DIST) turnRight(legJoints, FOOT_LIFT, STEP_ANGLE, STEP_DELAY);
+   else walkForward(legJoints, FOOT_LIFT, STEP_ANGLE, STEP_DELAY);
+   */
+   dist = sr04.Distance();
+   if (dist < OBST_DIST)
+   {
+     int stepsRight = scan(legJoints, FOOT_LIFT, STEP_ANGLE, STEP_DELAY, sr04, 5, 3, OBST_DIST);
+
+     if (stepsRight >= 0)
+     {
+      for (int i = 0; i < stepsRight; i++)
+      {
+        turnRight(legJoints, FOOT_LIFT, STEP_ANGLE, STEP_DELAY);
+      }
+     }
+     else
+     {
+      for (int i = 0; i < -stepsRight; i++)
+      {
+        turnLeft(legJoints, FOOT_LIFT, STEP_ANGLE, STEP_DELAY);
+      }
+     }
+   }
+   else walkForward(legJoints, FOOT_LIFT, STEP_ANGLE, STEP_DELAY);
+}
